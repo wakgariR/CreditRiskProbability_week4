@@ -6,7 +6,7 @@ PIPELINE_PATH = '../models/feature_pipeline.pkl'
 # --- Feature Definitions ---
 CUSTOMER_ID = 'AccountId'
 DATETIME_COL = 'TransactionStartTime'
-TARGET_COL = 'IsHighRisk' # This is the target we will define in Deliverable 1
+TARGET_COL = 'FraudResult' # This is the target we will define in Deliverable 1
 VALUE_COL = 'Value' # The primary column for Monetary features
 
 # --- Feature Groups ---

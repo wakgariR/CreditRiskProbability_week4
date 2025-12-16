@@ -1,0 +1,7 @@
+mlflow
+pytest
+scikit-learn
+pandas
+numpy
+joblib
+category-encoders

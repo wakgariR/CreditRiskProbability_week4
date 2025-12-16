@@ -1,12 +1,12 @@
 # --- Data Paths ---
-CLEANED_DATA_PATH = '../data/processed/data_cleaned.csv'
+CLEANED_DATA_PATH = '../data/target_engineered_data.csv'
 MODEL_PATH = '../models/risk_model.pkl'
 PIPELINE_PATH = '../models/feature_pipeline.pkl'
 
 # --- Feature Definitions ---
 CUSTOMER_ID = 'AccountId'
 DATETIME_COL = 'TransactionStartTime'
-TARGET_COL = 'FraudResult' # This is the target we will define in Deliverable 1
+TARGET_COL = 'is_high_risk' # This is the target we will define in Deliverable 1
 VALUE_COL = 'Value' # The primary column for Monetary features
 
 # --- Feature Groups ---

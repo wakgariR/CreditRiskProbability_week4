@@ -1,0 +1,18 @@
+# docker-compose.yml
+
+version: "3.8"
+
+services:
+  # Service for the FastAPI prediction endpoint
+  risk_api:
+    build: .
+    container_name: credit_risk_api
+    ports:
+      - "8000:8000"
+    # Mount volumes to access the MLflow tracking database (if local)
+    volumes:
+      - .:/app
+    # Set working directory inside the container
+    working_dir: /app
+    # Restart policy
+    restart: always

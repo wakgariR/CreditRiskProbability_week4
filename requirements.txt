@@ -5,3 +5,11 @@ pandas
 numpy
 joblib
 category-encoders
+# --- API Dependencies (Task 6) ---
+fastapi
+uvicorn[standard]
+pydantic # (If not already included with FastAPI)
+
+# --- CI/CD & Code Quality (Task 6) ---
+pytest
+flake8

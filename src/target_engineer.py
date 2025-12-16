@@ -2,20 +2,21 @@ import pandas as pd
 from datetime import datetime
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer # Added for robustness, though not strictly needed here
 import joblib
 
-# Assuming config.py is available for column definitions
-from config import * # Define paths for saving artifacts
-RFM_PATH = '../data/rfm_metrics.csv'
-TARGET_DATA_PATH = '../data/target_engineered_data.csv'
+# Assuming config.py is available for column definitions and paths
+from config import *
 
 def calculate_rfm(df):
     """Calculates Recency, Frequency, and Monetary metrics."""
     print("Calculating RFM metrics...")
     
-    # 1. Define Snapshot Date (e.g., one day after the last transaction)
-    # Ensure DATETIME_COL is in datetime format first
+    # 1. Define Snapshot Date
+    # Ensure DATETIME_COL is in datetime format
     df[DATETIME_COL] = pd.to_datetime(df[DATETIME_COL])
+    
+    # Snapshot date is typically one day after the last transaction for Recency calculation
     snapshot_date = df[DATETIME_COL].max() + pd.Timedelta(days=1)
     
     # Calculate RFM
@@ -28,6 +29,9 @@ def calculate_rfm(df):
         Monetary=(VALUE_COL, 'sum')
     ).reset_index()
     
+    # Handle any NaN/Inf that might result from edge cases before scaling
+    rfm_df.replace([float('inf'), -float('inf')], float('nan'), inplace=True)
+    
     print(f"RFM metrics calculated for {len(rfm_df)} customers.")
     return rfm_df
 
@@ -36,14 +40,17 @@ def cluster_and_label_risk(rfm_df):
     
     # --- 2. Pre-process RFM Features ---
     print("Scaling RFM features...")
-    rfm_features = rfm_df[['Recency', 'Frequency', 'Monetary']]
+    rfm_features = rfm_df[['Recency', 'Frequency', 'Monetary']].copy()
     
-    # Handle zero/negative monetary values by adding a small constant or clamping
-    # This is a common practice to prepare for log transformation, though we skip log here.
+    # Handle non-positive Monetary values (common in RFM for stability)
     rfm_features.loc[rfm_features['Monetary'] <= 0, 'Monetary'] = 0.01
 
+    # Impute potential NaNs (e.g., if a customer only has one transaction, Recency might be NaN based on calculation)
+    imputer = SimpleImputer(strategy='mean')
+    rfm_imputed = imputer.fit_transform(rfm_features)
+    
     scaler = StandardScaler()
-    rfm_scaled = scaler.fit_transform(rfm_features)
+    rfm_scaled = scaler.fit_transform(rfm_imputed)
     
     # --- 3. Cluster Customers (K-Means) ---
     K = 3 # Based on instructions
@@ -61,7 +68,7 @@ def cluster_and_label_risk(rfm_df):
         Count=('Cluster', 'count')
     ).sort_values(by=['Frequency_Avg', 'Monetary_Avg'], ascending=[True, True])
     
-    print("\n--- Cluster Analysis (Low values indicate High Risk) ---")
+    print("\n--- Cluster Analysis (Low values indicate High Risk/Low Engagement) ---")
     print(cluster_analysis)
     
     # The first cluster in the sorted list is the least engaged (Lowest F and M)
@@ -82,29 +89,28 @@ def integrate_target_variable(main_df, rfm_df):
     target_map = rfm_df[[CUSTOMER_ID, 'is_high_risk']]
     
     # Merge the target back into the main data based on CustomerId
-    # This ensures every transaction is labeled with its customer's risk profile
+    # This labels every transaction with its customer's risk profile
     final_df = main_df.merge(target_map, on=CUSTOMER_ID, how='left')
-    
-    # Optional: Drop the original FraudResult column if 'is_high_risk' is the intended proxy.
-    # Since you already had FraudResult, we'll keep both for now, but use 'is_high_risk'
-    # as the new TARGET_COL for the model if you wish to proceed with the RFM proxy.
     
     print(f"Target integration complete. Final dataset size: {len(final_df)}")
     return final_df
 
 def run_target_engineering():
-    # Load the main cleaned transaction data
+    print("Starting Target Variable Engineering (RFM Clustering)...")
+    
+    # Load the main cleaned transaction data (FIXED PATH)
     try:
-        # Assuming the cleaned data is the input source
         df = pd.read_csv(CLEANED_DATA_PATH) 
+        print(f"Successfully loaded input data from {CLEANED_DATA_PATH}")
     except FileNotFoundError:
-        print(f"Error: Cannot load {CLEANED_DATA_PATH}. Please run the initial cleaning step.")
+        print(f"Error: Cannot load {CLEANED_DATA_PATH}. Please ensure the initial cleaning step was run and the file exists.")
         return
 
     # 1. Calculate RFM
     rfm_metrics = calculate_rfm(df.copy())
     
     # 2. Cluster and Label Risk
+    # 
     rfm_labeled, rfm_scaler, rfm_kmeans = cluster_and_label_risk(rfm_metrics)
     
     # Save RFM metrics and artifacts
@@ -121,5 +127,4 @@ def run_target_engineering():
     print(f"Final target-engineered data saved to {TARGET_DATA_PATH}")
 
 if __name__ == '__main__':
-    # Ensure config.py is accessible and CLEANED_DATA_PATH is set correctly
     run_target_engineering()

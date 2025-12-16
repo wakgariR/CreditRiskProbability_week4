@@ -1,5 +1,5 @@
 # --- Data Paths ---
-CLEANED_DATA_PATH = '../data/processed/data_cleaned.csv'
+CLEANED_DATA_PATH = '../data/target_engineered_data.csv'
 TARGET_DATA_PATH = '../data/target_engineered_data.csv'   
 RFM_PATH = '../data/rfm_metrics.csv'
 MODEL_PATH = '../models/risk_model.pkl'
